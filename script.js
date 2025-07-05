@@ -1,10 +1,10 @@
-// Remove these lines entirely:
+// Remove these lines entirely as they are for the modular SDK and cause errors with the compatibility build:
 // import { initializeApp } from "firebase/app";
 // import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCdyfjSa7nOC23fYzAMkc8snqrnhLnDuTI",
+    apiKey: "AIzaSyCdyfjSa7nOC23fYzAMkc8snqrnhLnDuTI", // REPLACE WITH YOUR ACTUAL FIREBASE API KEY
     authDomain: "flavorfinderfeedback.firebaseapp.com",
     projectId: "flavorfinderfeedback",
     storageBucket: "flavorfinderfeedback.firebasestorage.app",
@@ -20,7 +20,7 @@ const db = firebase.firestore();
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- API Key ---
-    const API_KEY = '8a8295b5f3ef4ae1bd320653164918e6'; // <--- REMEMBER TO REPLACE WITH YOUR ACTUAL API KEY
+    const API_KEY = '8a8295b5f3ef4ae1bd320653164918e6'; // <--- REMEMBER TO REPLACE WITH YOUR ACTUAL SPOONACULAR API KEY
 
     // --- DOM Element References ---
     const appSections = document.querySelectorAll('.app-section');
@@ -60,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const preferencesForm = document.getElementById('preferences-form');
     const foodTypesSelect = document.getElementById('food-types');
     const favoriteDishInput = document.getElementById('favorite-dish');
-    // Removed direct reference to favoriteRecipesDisplay as it's now in favorites-section
     const recommendationsDisplay = document.getElementById('recommendations-display');
 
     // Welcome Preferences Form Elements
@@ -70,9 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Feedback Section
     const feedbackForm = document.getElementById('feedback-form');
-    // You might also want a message area for feedback form
-    const feedbackMessageArea = document.getElementById('feedback-message-area'); // Added: Assuming you will add this to your HTML
+    const feedbackMessageArea = document.getElementById('feedback-message-area');
 
+    // Contact Section (NEW REFERENCES)
+    const contactForm = document.getElementById('contact-form');
+    const contactMessageArea = document.getElementById('contact-message-area');
 
     // --- Global Variables for Recipe Details and Scaling ---
     let currentRecipeDetails = null;
@@ -182,6 +183,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Message Display Functions ---
     function displayMessage(msg, type = 'info', targetArea) {
+        if (!targetArea) { // Defensive check
+            console.error("Target message area not found:", msg, type);
+            return;
+        }
         targetArea.innerHTML = '';
         let messageHtml = `<div class="message ${type}">`;
         if (type === 'loading') {
@@ -202,13 +207,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearMessage(targetArea) {
-        targetArea.innerHTML = '';
+        if (targetArea) { // Defensive check
+            targetArea.innerHTML = '';
+        }
     }
 
     function clearAllMessages() {
         clearMessage(ingredientsMessageArea);
         clearMessage(recipeMessageArea);
-        clearMessage(feedbackMessageArea); // Added: Clear feedback message area
+        clearMessage(feedbackMessageArea);
+        clearMessage(contactMessageArea); // ADDED: Clear contact message area
     }
 
     // --- Search Logic (Cook with What I Have) ---
@@ -569,38 +577,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Feedback Section Logic ---
-    feedbackForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const name = document.getElementById('feedback-name').value;
-        const email = document.getElementById('feedback-email').value;
-        const message = document.getElementById('feedback-message').value;
+    if (feedbackForm) { // Defensive check
+        feedbackForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const name = document.getElementById('feedback-name').value;
+            const email = document.getElementById('feedback-email').value;
+            const message = document.getElementById('feedback-message').value;
 
-        // Basic validation
-        if (!message) {
-            displayMessage('Please enter your feedback message.', 'error', feedbackMessageArea); // Use displayMessage
-            return;
-        }
+            // Basic validation
+            if (!message) {
+                displayMessage('Please enter your feedback message.', 'error', feedbackMessageArea);
+                return;
+            }
 
-        displayMessage('Sending feedback...', 'loading', feedbackMessageArea); // Display loading message
+            displayMessage('Sending feedback...', 'loading', feedbackMessageArea);
 
-        try {
-            // Add a new document (feedback message) to the "feedback" collection
-            // Use db.collection("collectionName").add() for compatibility SDK
-            await db.collection("feedback").add({
-                name: name,
-                email: email,
-                message: message,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp() // Use firebase.firestore.FieldValue.serverTimestamp()
-            });
-            console.log("Feedback submitted successfully.");
-            displayMessage('Thank you for your feedback! It has been submitted.', 'success', feedbackMessageArea); // Use displayMessage
-            feedbackForm.reset(); // Clear the form
+            try {
+                await db.collection("feedback").add({
+                    name: name,
+                    email: email,
+                    message: message,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log("Feedback submitted successfully.");
+                displayMessage('Thank you for your feedback! It has been submitted.', 'success', feedbackMessageArea);
+                feedbackForm.reset();
 
-        } catch (error) {
-            console.error("Error adding feedback: ", error);
-            displayMessage(`There was an error submitting your feedback: ${error.message}`, 'error', feedbackMessageArea); // Use displayMessage
-        }
-    });
+            } catch (error) {
+                console.error("Error adding feedback: ", error);
+                displayMessage(`There was an error submitting your feedback: ${error.message}`, 'error', feedbackMessageArea);
+            }
+        });
+    }
+
+    // --- Contact Form Logic (NEW SECTION) ---
+    if (contactForm) { // Check if the contact form exists in the HTML
+        contactForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const name = document.getElementById('contact-name').value;
+            const email = document.getElementById('contact-email').value;
+            const subject = document.getElementById('contact-subject').value;
+            const message = document.getElementById('contact-message').value;
+
+            // Basic validation
+            if (!name || !email || !subject || !message) {
+                displayMessage('Please fill in all fields.', 'error', contactMessageArea);
+                return;
+            }
+
+            displayMessage('Sending message...', 'loading', contactMessageArea);
+
+            try {
+                // Add a new document (contact message) to the "contacts" collection
+                await db.collection("contacts").add({
+                    name: name,
+                    email: email,
+                    subject: subject,
+                    message: message,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp() // Use Firebase server timestamp
+                });
+                console.log("Contact message submitted successfully.");
+                displayMessage('Your message has been sent successfully! We will get back to you soon.', 'success', contactMessageArea);
+                contactForm.reset(); // Clear the form
+
+            } catch (error) {
+                console.error("Error adding contact message: ", error);
+                displayMessage(`There was an error sending your message: ${error.message}`, 'error', contactMessageArea);
+            }
+        });
+    }
+
 
     // --- Initial Page Load Handling ---
     function handleInitialLoad() {
