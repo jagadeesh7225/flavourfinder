@@ -1,530 +1,693 @@
-// REMOVED: import { initializeApp } from "firebase/app";
-// REMOVED: import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// Import Firestore-specific functions
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore"; // <--- ADD THIS LINE
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCdyfjSa7nOC23fYzAMkc8snqrnhLnDuTI", // Replace with your actual API key from Firebase Project Settings
-    authDomain: "flavorfinderfeedback.firebaseapp.com",
-    projectId: "flavorfinderfeedback",
-    storageBucket: "flavorfinderfeedback.firebasestorage.app",
-    messagingSenderId: "1020798096498",
-    appId: "1:1020798096498:web:96def282d9607dcf821eeb"
+  apiKey: "AIzaSyCdyfjSa7nOC23fYzAMkc8snqrnhLnDuTI",
+  authDomain: "flavorfinderfeedback.firebaseapp.com",
+  projectId: "flavorfinderfeedback",
+  storageBucket: "flavorfinderfeedback.firebasestorage.app",
+  messagingSenderId: "1020798096498",
+  appId: "1:1020798096498:web:96def282d9607dcf821eeb"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+// Get a reference to the Firestore service <--- ADD THIS LINE
+const db = getFirestore(app); // <--- ADD THIS LINE
+
+
 document.addEventListener('DOMContentLoaded', () => {
+    // --- API Key ---
+    const API_KEY = '8a8295b5f3ef4ae1bd320653164918e6'; // <--- REMEMBER TO REPLACE WITH YOUR ACTUAL API KEY
 
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // --- DOM Element References ---
+    const appSections = document.querySelectorAll('.app-section');
+    const navButtons = document.querySelectorAll('#main-nav button, .mode-buttons button');
 
-    // --- DOM Elements ---
-    const appContainer = document.getElementById('app-container');
-    const mainNavButtons = document.querySelectorAll('#main-nav button');
-    const modeButtons = document.querySelectorAll('.mode-buttons button'); // Selects buttons within mode-selection
+    // Modals
+    const recipeDetailsModal = document.getElementById('recipe-details-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const welcomePreferencesModal = document.getElementById('welcome-preferences-modal');
+    const closeWelcomeModalBtn = document.getElementById('close-welcome-modal-btn');
+
+    // Recipe Details Modal Elements
+    const detailTitle = document.getElementById('detail-title');
+    const detailImage = document.getElementById('detail-image');
+    const numPersonsInput = document.getElementById('num-persons');
+    const originalServingsInfo = document.getElementById('original-servings-info');
+    const detailIngredientsList = document.getElementById('detail-ingredients');
+    const detailInstructions = document.getElementById('detail-instructions');
+    const sourceUrlLink = document.getElementById('source-url');
+
+    // Search Sections & Elements
+    const modeSelectionSection = document.getElementById('mode-selection');
+    const ingredientsSearchSection = document.getElementById('ingredients-search-section');
+    const recipeSearchSection = document.getElementById('recipe-search-section');
 
     const ingredientsInput = document.getElementById('ingredients-input');
     const searchIngredientsBtn = document.getElementById('search-ingredients-btn');
-    const ingredientsSearchResults = document.getElementById('ingredients-search-results');
+    const ingredientsResults = document.getElementById('ingredients-search-results');
     const ingredientsMessageArea = document.getElementById('ingredients-message-area');
 
     const recipeNameInput = document.getElementById('recipe-name-input');
     const searchRecipeBtn = document.getElementById('search-recipe-btn');
-    const recipeSearchResults = document.getElementById('recipe-search-results');
+    const recipeResults = document.getElementById('recipe-search-results');
     const recipeMessageArea = document.getElementById('recipe-message-area');
 
-    const preferencesSection = document.getElementById('preferences-section');
+    // Preferences Section Elements
     const preferencesForm = document.getElementById('preferences-form');
     const foodTypesSelect = document.getElementById('food-types');
     const favoriteDishInput = document.getElementById('favorite-dish');
+    // Removed direct reference to favoriteRecipesDisplay as it's now in favorites-section
     const recommendationsDisplay = document.getElementById('recommendations-display');
 
-    const favoritesSection = document.getElementById('favorites-section');
-    const favoriteRecipesDisplay = document.getElementById('favorite-recipes-display');
-
-    const feedbackForm = document.getElementById('feedback-form');
-    const feedbackMessageArea = document.getElementById('feedback-message-area');
-
-    const contactForm = document.getElementById('contact-form');
-    const contactMessageArea = document.getElementById('contact-message-area'); // Added this line
-
-    // Recipe Details Modal Elements
-    const recipeDetailsModal = document.getElementById('recipe-details-modal');
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const detailTitle = document.getElementById('detail-title');
-    const detailImage = document.getElementById('detail-image');
-    const detailIngredients = document.getElementById('detail-ingredients');
-    const detailInstructions = document.getElementById('detail-instructions');
-    const sourceUrl = document.getElementById('source-url');
-    const numPersonsInput = document.getElementById('num-persons');
-    const originalServingsInfo = document.getElementById('original-servings-info');
-
-    // Welcome Preferences Modal Elements
-    const welcomePreferencesModal = document.getElementById('welcome-preferences-modal');
-    const closeWelcomeModalBtn = document.getElementById('close-welcome-modal-btn');
+    // Welcome Preferences Form Elements
     const welcomePreferencesForm = document.getElementById('welcome-preferences-form');
     const welcomeFoodTypesSelect = document.getElementById('welcome-food-types');
     const welcomeFavoriteDishInput = document.getElementById('welcome-favorite-dish');
 
-    // --- State Variables ---
-    let currentServings = 1;
+    // Feedback Section
+    const feedbackForm = document.getElementById('feedback-form');
+    // You might also want a message area for feedback form
+    // const feedbackMessageArea = document.getElementById('feedback-message-area'); // Add this to your HTML if you want specific feedback messages
+
+    // --- Global Variables for Recipe Details and Scaling ---
+    let currentRecipeDetails = null;
     let originalRecipeServings = 1;
-    let originalRecipeIngredients = [];
-    let favorites = JSON.parse(localStorage.getItem('flavorFinderFavorites')) || [];
-    let userPreferences = JSON.parse(localStorage.getItem('flavorFinderPreferences')) || {};
-    let firstVisit = localStorage.getItem('flavorFinderFirstVisit') === null; // Check if it's the first visit
 
-    // --- Helper Functions ---
+    // --- Local Storage Keys ---
+    const HAS_VISITED_KEY = 'flavorFinder_hasVisited';
+    const USER_PREFERENCES_KEY = 'flavorFinder_userPreferences';
+    const FAVORITE_RECIPES_KEY = 'flavorFinder_favoriteRecipes';
 
+    // --- Section Management ---
     /**
-     * Shows a specific application section and hides others.
-     * @param {string} sectionId The ID of the section to show.
+     * Shows a specific section and hides all others.
+     * Updates the browser history state.
+     * @param {string} sectionId - The ID of the section to show.
+     * @param {boolean} pushState - True to push a new state, false to replace current state.
      */
-    function showSection(sectionId) {
-        document.querySelectorAll('.app-section').forEach(section => {
+    function showSection(sectionId, pushState = true) {
+        appSections.forEach(section => {
             section.classList.remove('active-section');
         });
-        document.getElementById(sectionId).classList.add('active-section');
 
-        // Update active class on nav buttons
-        mainNavButtons.forEach(button => {
-            if (button.dataset.section === sectionId) {
-                button.classList.add('active');
-            } else {
-                button.classList.remove('active');
+        // Hide specific search-related elements if not on a search section
+        if (sectionId !== 'ingredients-search-section' && sectionId !== 'recipe-search-section') {
+            ingredientsResults.innerHTML = ''; // Clear results
+            ingredientsInput.value = ''; // Clear input
+            clearMessage(ingredientsMessageArea); // Clear messages
+
+            recipeResults.innerHTML = ''; // Clear results
+            recipeNameInput.value = ''; // Clear input
+            clearMessage(recipeMessageArea); // Clear messages
+        }
+
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.classList.add('active-section');
+
+            // Explicitly hide mode-selection if navigating to a search section
+            if (sectionId === 'ingredients-search-section' || sectionId === 'recipe-search-section') {
+                modeSelectionSection.classList.remove('active-section');
+            } else if (sectionId === 'mode-selection') {
+                   // Ensure mode-selection is visible when home is clicked
+                   modeSelectionSection.classList.add('active-section');
             }
-        });
-        clearAllMessages(); // Clear messages when switching sections
-    }
 
-    /**
-     * Displays a message in a specific message area.
-     * @param {HTMLElement} messageArea The DOM element to display the message in.
-     * @param {string} message The message text.
-     * @param {string} type The type of message ('success', 'error', 'info').
-     */
-    function showMessage(messageArea, message, type = 'info') {
-        messageArea.innerHTML = `<p class="message ${type}">${message}</p>`;
-        messageArea.style.display = 'block';
-    }
+            // Re-render content specific to sections when they are shown
+            if (sectionId === 'preferences-section') {
+                displayUserPreferences();
+                displayRecommendedRecipes();
+            } else if (sectionId === 'favorites-section') { // Load favorites when this section is active
+                displayFavoriteRecipes();
+            }
 
-    /**
-     * Clears a specific message area.
-     * @param {HTMLElement} messageArea The DOM element to clear.
-     */
-    function clearMessage(messageArea) {
-        if (messageArea) { // Check if messageArea exists before trying to clear
-            messageArea.innerHTML = '';
-            messageArea.style.display = 'none';
+            // Update browser history
+            const url = `?view=${sectionId}`;
+            if (pushState) {
+                history.pushState({ view: sectionId }, '', url);
+            } else {
+                history.replaceState({ view: sectionId }, '', url);
+            }
         }
     }
 
-    /**
-     * Clears all message areas in the application.
-     */
+    // --- Event Listeners for Navigation ---
+    navButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            const sectionId = event.target.dataset.section;
+            if (sectionId) {
+                clearAllMessages();
+                showSection(sectionId, true);
+            }
+        });
+    });
+
+    // --- Common Modal Logic ---
+    closeModalBtn.addEventListener('click', () => {
+        recipeDetailsModal.classList.remove('active');
+        if (history.state && history.state.view === 'recipe-details') {
+            history.back();
+        }
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === recipeDetailsModal) {
+            recipeDetailsModal.classList.remove('active');
+            if (history.state && history.state.view === 'recipe-details') {
+                history.back();
+            }
+        }
+    });
+
+    numPersonsInput.addEventListener('input', () => {
+        const newServings = parseInt(numPersonsInput.value);
+        if (!isNaN(newServings) && newServings >= 1) {
+            displayIngredientsForServings(newServings);
+        } else if (numPersonsInput.value === '') {
+            displayIngredientsForServings(originalRecipeServings);
+        }
+    });
+
+    // Function to open recipe details modal
+    async function openRecipeModal(recipeId) {
+        const currentSectionId = document.querySelector('.app-section.active-section')?.id || 'mode-selection';
+        history.pushState({ view: 'recipe-details', recipeId: recipeId, previousView: currentSectionId }, '', `?recipe=${recipeId}`);
+        await fetchRecipeDetails(recipeId);
+    }
+
+    // --- Message Display Functions ---
+    function displayMessage(msg, type = 'info', targetArea) {
+        targetArea.innerHTML = '';
+        let messageHtml = `<div class="message ${type}">`;
+        if (type === 'loading') {
+            messageHtml += `
+                <div class="spice-loader">
+                    <div class="spice-particle"></div>
+                    <div class="spice-particle"></div>
+                    <div class="spice-particle"></div>
+                    <div class="spice-particle"></div>
+                    <div class="spice-particle"></div>
+                </div>
+                <span>${msg}</span>`;
+        } else {
+            messageHtml += `${msg}`;
+        }
+        messageHtml += `</div>`;
+        targetArea.innerHTML = messageHtml;
+    }
+
+    function clearMessage(targetArea) {
+        targetArea.innerHTML = '';
+    }
+
     function clearAllMessages() {
         clearMessage(ingredientsMessageArea);
         clearMessage(recipeMessageArea);
-        clearMessage(feedbackMessageArea);
-        clearMessage(contactMessageArea); // Clear contact form messages too
-        // Add any other message areas if they exist
+        // If you add feedbackMessageArea, clear it here too
+        // clearMessage(feedbackMessageArea);
     }
 
+    // --- Search Logic (Cook with What I Have) ---
+    searchIngredientsBtn.addEventListener('click', () => {
+        fetchAndDisplayRecipes('ingredients', ingredientsInput.value.trim(), ingredientsResults, ingredientsMessageArea);
+    });
 
-    /**
-     * Renders recipe cards in a specified container.
-     * @param {Array} recipes An array of recipe objects.
-     * @param {HTMLElement} container The DOM element to render recipes into.
-     */
-    function renderRecipes(recipes, container) {
-        container.innerHTML = ''; // Clear previous results
-        if (recipes.length === 0) {
-            showMessage(container.previousElementSibling, 'No recipes found. Try different ingredients or search terms.', 'info');
-            return;
+    ingredientsInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchAndDisplayRecipes('ingredients', ingredientsInput.value.trim(), ingredientsResults, ingredientsMessageArea);
         }
-        clearMessage(container.previousElementSibling); // Clear message if recipes are found
+    });
 
-        recipes.forEach(recipe => {
-            const recipeCard = document.createElement('div');
-            recipeCard.classList.add('recipe-card');
+    // --- Search Logic (Find a Specific Recipe) ---
+    searchRecipeBtn.addEventListener('click', () => {
+        fetchAndDisplayRecipes('recipe-search', recipeNameInput.value.trim(), recipeResults, recipeMessageArea);
+    });
 
-            const isFavorite = favorites.some(fav => fav.uri === recipe.uri);
-            const favoriteIconClass = isFavorite ? 'fas' : 'far'; // Solid or regular heart
-
-            recipeCard.innerHTML = `
-                <img src="${recipe.image}" alt="${recipe.label}">
-                <h3>${recipe.label}</h3>
-                <p>Cuisine: ${recipe.cuisineType ? recipe.cuisineType.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ') : 'N/A'}</p>
-                <p>Meal Type: ${recipe.mealType ? recipe.mealType.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ') : 'N/A'}</p>
-                <div class="card-actions">
-                    <button class="view-recipe-btn btn secondary-btn" data-uri="${recipe.uri}">View Recipe</button>
-                    <button class="favorite-btn" data-uri="${recipe.uri}">
-                        <i class="${favoriteIconClass} fa-heart"></i>
-                    </button>
-                </div>
-            `;
-            container.appendChild(recipeCard);
-        });
-
-        // Add event listeners to newly created buttons
-        container.querySelectorAll('.view-recipe-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const recipeUri = event.target.dataset.uri;
-                const selectedRecipe = recipes.find(r => r.uri === recipeUri);
-                if (selectedRecipe) {
-                    displayRecipeDetails(selectedRecipe);
-                }
-            });
-        });
-
-        container.querySelectorAll('.favorite-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const recipeUri = event.target.dataset.uri;
-                const recipe = recipes.find(r => r.uri === recipeUri);
-                if (recipe) {
-                    toggleFavorite(recipe, event.target.querySelector('i'));
-                }
-            });
-        });
-    }
-
-    /**
-     * Displays detailed information for a single recipe in a modal.
-     * @param {object} recipe The recipe object to display.
-     */
-    function displayRecipeDetails(recipe) {
-        detailTitle.textContent = recipe.label;
-        detailImage.src = recipe.image;
-        detailImage.alt = recipe.label;
-
-        originalRecipeServings = recipe.yield;
-        originalRecipeIngredients = recipe.ingredients.map(ing => ({
-            text: ing.text,
-            quantity: ing.quantity,
-            measure: ing.measure,
-            food: ing.food
-        }));
-
-        numPersonsInput.value = originalRecipeServings; // Default to original servings
-        originalServingsInfo.textContent = `(Original: ${originalRecipeServings} servings)`;
-
-        updateIngredientsDisplay(originalRecipeIngredients, originalRecipeServings);
-
-        // Display instructions - Edamam API often provides instructions as part of 'url' or a 'digest'
-        // For detailed instructions, it's best to link to the source.
-        if (recipe.url) {
-            sourceUrl.href = recipe.url;
-            sourceUrl.style.display = 'inline-block';
-            detailInstructions.innerHTML = `<p>For detailed instructions, please visit the full recipe source:</p>`;
-        } else {
-            sourceUrl.style.display = 'none';
-            detailInstructions.innerHTML = `<p>Detailed instructions not available directly via API. Please refer to the source if available.</p>`;
+    recipeNameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchAndDisplayRecipes('recipe-search', recipeNameInput.value.trim(), recipeResults, recipeMessageArea);
         }
-
-        recipeDetailsModal.style.display = 'block'; // Show the modal
-    }
+    });
 
     /**
-     * Updates the displayed ingredients based on the number of servings.
-     * @param {Array} ingredients The original ingredients list.
-     * @param {number} servings The current number of servings.
+     * Fetches recipes from Spoonacular API and displays them.
+     * @param {'ingredients'|'recipe-search'} mode - The search mode.
+     * @param {string} query - The search query.
+     * @param {HTMLElement} resultsContainer - The DOM element to render recipe cards into.
+     * @param {HTMLElement} messageArea - The DOM element to display messages.
      */
-    function updateIngredientsDisplay(ingredients, servings) {
-        detailIngredients.innerHTML = '';
-        const ratio = servings / originalRecipeServings;
-
-        ingredients.forEach(ing => {
-            const li = document.createElement('li');
-            let quantityText = '';
-            if (ing.quantity && !isNaN(ing.quantity) && ing.quantity > 0) {
-                const adjustedQuantity = (ing.quantity * ratio);
-                // Round to 2 decimal places, or display as whole number if it's integer
-                quantityText = adjustedQuantity % 1 === 0 ? adjustedQuantity.toFixed(0) : adjustedQuantity.toFixed(2);
-                quantityText += ` ${ing.measure || ''}`;
-            }
-            li.textContent = `${quantityText} ${ing.food || ing.text}`;
-            detailIngredients.appendChild(li);
-        });
-    }
-
-    /**
-     * Toggles a recipe's favorite status and updates local storage and UI.
-     * @param {object} recipe The recipe object.
-     * @param {HTMLElement} iconElement The Font Awesome icon element.
-     */
-    function toggleFavorite(recipe, iconElement) {
-        const index = favorites.findIndex(fav => fav.uri === recipe.uri);
-        if (index > -1) {
-            favorites.splice(index, 1); // Remove from favorites
-            iconElement.classList.remove('fas');
-            iconElement.classList.add('far');
-            showMessage(feedbackMessageArea, `"${recipe.label}" removed from favorites.`, 'info');
-        } else {
-            favorites.push(recipe); // Add to favorites
-            iconElement.classList.remove('far');
-            iconElement.classList.add('fas');
-            showMessage(feedbackMessageArea, `"${recipe.label}" added to favorites!`, 'success');
-        }
-        localStorage.setItem('flavorFinderFavorites', JSON.stringify(favorites));
-        renderFavorites(); // Re-render favorites section if visible
-    }
-
-    /**
-     * Renders the favorite recipes in the favorites section.
-     */
-    function renderFavorites() {
-        if (favorites.length === 0) {
-            favoriteRecipesDisplay.innerHTML = `
-                <p class="message info"><i class="fas fa-info-circle"></i> No favorites yet! Click the heart icon on a recipe card to save it.</p>
-            `;
-        } else {
-            favoriteRecipesDisplay.innerHTML = '';
-            // Pass a copy of favorites array for rendering, ensuring the heart icon is solid
-            renderRecipes(favorites.map(fav => ({ ...fav, isFavorite: true })), favoriteRecipesDisplay);
-        }
-    }
-
-    /**
-     * Fetches recommendations based on user preferences.
-     * This is a simplified recommendation logic. For a real app, this would involve
-     * more complex algorithms or a backend.
-     */
-    async function fetchRecommendations() {
-        recommendationsDisplay.innerHTML = `<p class="message info">Generating recommendations...</p>`;
-
-        const preferredCuisines = userPreferences.foodTypes && userPreferences.foodTypes.length > 0
-            ? userPreferences.foodTypes.join(',')
-            : '';
-        const favoriteDish = userPreferences.favoriteDish || '';
-
-        let query = preferredCuisines || favoriteDish;
+    async function fetchAndDisplayRecipes(mode, query, resultsContainer, messageArea) {
+        resultsContainer.innerHTML = '';
+        clearMessage(messageArea);
 
         if (!query) {
-            recommendationsDisplay.innerHTML = `<p class="message info">Enter your preferences to get recommendations!</p>`;
+            displayMessage(`Please enter a ${mode === 'ingredients' ? 'few ingredients (e.g., chicken, rice, soy sauce)' : 'recipe name (e.g., Pizza, Curry, Cake)'} to search.`, 'error', messageArea);
             return;
+        }
+
+        displayMessage(`Searching for recipes...`, 'loading', messageArea);
+
+        let url = '';
+        if (mode === 'ingredients') {
+            url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${query}&number=15&ranking=1&ignorePantry=true&apiKey=${API_KEY}`;
+        } else if (mode === 'recipe-search') {
+            url = `https://api.spoonacular.com/recipes/complexSearch?query=${query}&number=15&apiKey=${API_KEY}`;
         }
 
         try {
-            // Prioritize searching by favorite dish if available, otherwise by cuisine
-            const searchParam = favoriteDish ? `q=${encodeURIComponent(favoriteDish)}` : `cuisineType=${encodeURIComponent(preferredCuisines)}`;
-            const response = await fetch(`https://api.edamam.com/api/recipes/v2?type=public&${searchParam}&app_id=${API_ID}&app_key=${API_KEY}`);
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
+            }
             const data = await response.json();
 
-            if (data.hits && data.hits.length > 0) {
-                const recommendedRecipes = data.hits.map(hit => hit.recipe).slice(0, 8); // Get top 8 recommendations
-                renderRecipes(recommendedRecipes, recommendationsDisplay);
-                clearMessage(recommendationsDisplay.previousElementSibling); // Clear 'Generating recommendations' message
+            const results = mode === 'recipe-search' ? data.results : data;
+
+            if (results.length === 0) {
+                displayMessage(`No recipes found for "${query}". Try different ${mode === 'ingredients' ? 'ingredients' : 'keywords'}!`, 'no-results', messageArea);
+                return;
+            }
+
+            clearMessage(messageArea);
+            renderRecipeCards(results, resultsContainer.id);
+
+        } catch (error) {
+            console.error(`Error fetching recipes by ${mode}:`, error);
+            displayMessage(`Failed to fetch recipes. Please check your API key and try again. Error: ${error.message}`, 'error', messageArea);
+        }
+    }
+
+    // --- Reusable Function: Render Recipe Cards ---
+    /**
+     * Renders recipe cards into a specified container.
+     * @param {Array<Object>} recipes - An array of recipe objects.
+     * @param {string} containerId - The ID of the DOM element to render cards into.
+     */
+    function renderRecipeCards(recipes, containerId) {
+        const containerDiv = document.getElementById(containerId);
+        if (!containerDiv) {
+            console.error(`Container div with ID "${containerId}" not found.`);
+            return;
+        }
+        containerDiv.innerHTML = '';
+
+        if (recipes && recipes.length > 0) {
+            recipes.forEach((recipe, index) => {
+                const recipeCard = document.createElement('div');
+                recipeCard.classList.add('recipe-card');
+                recipeCard.innerHTML = `
+                    <img src="${recipe.image || 'https://via.placeholder.com/300x200?text=No+Image'}" alt="${recipe.title}">
+                    <h3>${recipe.title}</h3>
+                    <button class="favorite-btn" data-recipe-id="${recipe.id}">
+                        <i class="far fa-heart"></i>
+                    </button>
+                `;
+
+                const favoriteBtn = recipeCard.querySelector('.favorite-btn');
+                const heartIcon = favoriteBtn.querySelector('i');
+                if (isFavorite(recipe.id)) {
+                    heartIcon.classList.remove('far');
+                    heartIcon.classList.add('fas');
+                }
+
+                recipeCard.addEventListener('click', (e) => {
+                    if (!e.target.closest('.favorite-btn')) {
+                        openRecipeModal(recipe.id);
+                    }
+                });
+
+                favoriteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+
+                    // Animate the heart icon
+                    heartIcon.classList.remove('heart-pop'); // Remove to allow re-triggering animation
+                    void heartIcon.offsetWidth; // Trigger reflow to restart animation
+                    heartIcon.classList.add('heart-pop');
+
+                    toggleFavoriteRecipe(recipe.id, recipe.title, recipe.image || 'https://via.placeholder.com/300x200?text=No+Image');
+
+                    // Toggle heart icon class immediately for visual feedback (filled/outlined)
+                    if (heartIcon.classList.contains('far')) {
+                        heartIcon.classList.remove('far');
+                        heartIcon.classList.add('fas');
+                    } else {
+                        heartIcon.classList.remove('fas');
+                        heartIcon.classList.add('far');
+                    }
+
+                    // If the Favorites section is currently active, re-render it to reflect changes
+                    if (document.getElementById('favorites-section').classList.contains('active-section')) {
+                        displayFavoriteRecipes();
+                    }
+                });
+
+                containerDiv.appendChild(recipeCard);
+
+                setTimeout(() => {
+                    recipeCard.classList.add('fade-in');
+                }, 100 * index);
+            });
+        } else {
+            if (containerId === 'favorite-recipes-display') {
+                 containerDiv.innerHTML = '<p class="message info"><i class="fas fa-info-circle"></i> No favorites yet! Click the heart icon on a recipe card to save it.</p>';
             } else {
-                recommendationsDisplay.innerHTML = `<p class="message info">No recommendations found for your current preferences. Try adjusting them!</p>`;
+                 containerDiv.innerHTML = '<p class="message info">No recipes to display.</p>';
+            }
+        }
+    }
+
+    // --- Unified Function: Fetch & Display Detailed Recipe Information ---
+    async function fetchRecipeDetails(recipeId) {
+        detailTitle.textContent = '';
+        detailImage.src = '';
+        detailImage.alt = '';
+        numPersonsInput.value = 1;
+        originalServingsInfo.textContent = '';
+        detailIngredientsList.innerHTML = '';
+        detailInstructions.innerHTML = '';
+        sourceUrlLink.href = '#';
+        sourceUrlLink.style.display = 'none';
+
+        detailTitle.textContent = 'Loading Recipe...';
+        detailImage.alt = 'Loading...';
+        detailInstructions.innerHTML = '<div class="message loading"><div class="spice-loader"><div class="spice-particle"></div><div class="spice-particle"></div><div class="spice-particle"></div><div class="spice-particle"></div><div class="spice-particle"></div></div><span>Fetching details...</span></div>';
+
+        recipeDetailsModal.classList.add('active');
+
+        const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${API_KEY}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
+            }
+            const recipe = await response.json();
+
+            currentRecipeDetails = recipe;
+            originalRecipeServings = recipe.servings || 1;
+
+            detailTitle.textContent = recipe.title;
+            detailImage.src = recipe.image || 'https://via.placeholder.com/400x250?text=No+Image';
+            detailImage.alt = recipe.title;
+            detailInstructions.innerHTML = recipe.instructions || '<p>No detailed instructions available for this recipe. Please check the source link.</p>';
+            originalServingsInfo.textContent = ` (Original: ${recipe.servings || 'N/A'} servings)`;
+            numPersonsInput.value = originalRecipeServings;
+
+            displayIngredientsForServings(originalRecipeServings);
+
+            if (recipe.sourceUrl) {
+                sourceUrlLink.href = recipe.sourceUrl;
+                sourceUrlLink.style.display = 'inline-block';
+            } else {
+                sourceUrlLink.style.display = 'none';
+            }
+
+        } catch (error) {
+            console.error('Error fetching recipe details:', error);
+            detailInstructions.innerHTML = `<div class="message error"><i class="fas fa-exclamation-triangle"></i> Failed to load recipe details. Please try again. Error: ${error.message}</div>`;
+            detailTitle.textContent = 'Recipe Not Found';
+            detailImage.src = 'https://via.placeholder.com/400x250?text=Error';
+            detailImage.alt = 'Error loading recipe';
+        }
+    }
+
+    // --- Core Function: Dynamically Scale and Display Ingredients ---
+    function displayIngredientsForServings(targetServings) {
+        detailIngredientsList.innerHTML = '';
+
+        if (!currentRecipeDetails || !currentRecipeDetails.extendedIngredients || currentRecipeDetails.extendedIngredients.length === 0) {
+            detailIngredientsList.innerHTML = '<li>Ingredients not available for scaling.</li>';
+            return;
+        }
+
+        const ratio = targetServings / originalRecipeServings;
+
+        currentRecipeDetails.extendedIngredients.forEach(ingredient => {
+            const li = document.createElement('li');
+            let quantity = ingredient.amount;
+            let unit = ingredient.unit || '';
+            let originalString = ingredient.original || '';
+
+            if (typeof quantity === 'number' && !isNaN(quantity)) {
+                quantity = (quantity * ratio);
+
+                if (quantity === 0) {
+                    li.textContent = `0 ${unit} ${ingredient.name}`;
+                } else if (quantity < 0.001) {
+                    li.textContent = `trace ${unit} ${ingredient.name}`;
+                } else if (quantity < 1 && quantity > 0) {
+                    li.textContent = `${quantity.toFixed(2).replace(/^0+/, '')} ${unit} ${ingredient.name}`;
+                } else if (quantity % 1 === 0) {
+                    li.textContent = `${Math.round(quantity)} ${unit} ${ingredient.name}`;
+                } else {
+                    li.textContent = `${quantity.toFixed(1)} ${unit} ${ingredient.name}`;
+                }
+            } else {
+                li.textContent = originalString;
+            }
+            detailIngredientsList.appendChild(li);
+        });
+    }
+
+    // --- Local Storage and Preferences Functions ---
+    function getUserPreferences() {
+        const preferencesJson = localStorage.getItem(USER_PREFERENCES_KEY);
+        return preferencesJson ? JSON.parse(preferencesJson) : {
+            foodTypes: [],
+            favoriteDish: ''
+        };
+    }
+
+    function saveUserPreferences(preferences) {
+        localStorage.setItem(USER_PREFERENCES_KEY, JSON.stringify(preferences));
+    }
+
+    function saveWelcomePreferences() {
+        const selectedCuisines = Array.from(welcomeFoodTypesSelect.selectedOptions).map(option => option.value);
+        const favoriteDish = welcomeFavoriteDishInput.value.trim();
+
+        const preferences = {
+            foodTypes: selectedCuisines,
+            favoriteDish: favoriteDish
+        };
+        saveUserPreferences(preferences);
+        localStorage.setItem(HAS_VISITED_KEY, 'true');
+    }
+
+    function displayUserPreferences() {
+        const savedPreferences = getUserPreferences();
+        Array.from(foodTypesSelect.options).forEach(option => {
+            option.selected = savedPreferences.foodTypes.includes(option.value);
+        });
+        favoriteDishInput.value = savedPreferences.favoriteDish;
+    }
+
+    async function displayRecommendedRecipes() {
+        recommendationsDisplay.innerHTML = '<p class="message loading"><div class="spice-loader"><div class="spice-particle"></div><div class="spice-particle"></div><div class="spice-particle"></div><div class="spice-particle"></div><div class="spice-particle"></div></div><span>Loading recommendations...</span></p>';
+        const preferences = getUserPreferences();
+        let query = preferences.foodTypes.join(', ');
+        if (!query && preferences.favoriteDish) {
+            query = preferences.favoriteDish;
+        }
+
+        if (!query) {
+            recommendationsDisplay.innerHTML = '<p>Enter your preferences to get recommendations!</p>';
+            return;
+        }
+
+        const dietaryRestrictions = preferences.foodTypes.filter(type => ['Vegan', 'Vegetarian', 'Gluten Free', 'Dairy Free'].includes(type));
+        const tags = dietaryRestrictions.length > 0 ? `&diet=${dietaryRestrictions.join(',')}` : '';
+
+        const url = `https://api.spoonacular.com/recipes/complexSearch?query=${query}&number=10&sort=popularity&minFat=0&minProtein=0&minCarbs=0${tags}&apiKey=${API_KEY}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+                renderRecipeCards(data.results, 'recommendations-display');
+            } else {
+                recommendationsDisplay.innerHTML = '<p class="message info">No recommendations found based on your preferences. Try broadening them!</p>';
             }
         } catch (error) {
             console.error('Error fetching recommendations:', error);
-            recommendationsDisplay.innerHTML = `<p class="message error">Failed to load recommendations. Please try again later.</p>`;
+            recommendationsDisplay.innerHTML = `<p class="message error"><i class="fas fa-exclamation-triangle"></i> Failed to load recommendations. Please try again later. Error: ${error.message}</p>`;
         }
     }
 
-    // --- Event Listeners ---
+    function getFavoriteRecipes() {
+        const favoritesJson = localStorage.getItem(FAVORITE_RECIPES_KEY);
+        return favoritesJson ? JSON.parse(favoritesJson) : [];
+    }
 
-    // Navigation buttons
-    mainNavButtons.forEach(button => {
-        button.addEventListener('click', (event) => {
-            const sectionId = event.target.dataset.section;
-            showSection(sectionId);
-            // Specific actions for sections
-            if (sectionId === 'favorites-section') {
-                renderFavorites();
-            } else if (sectionId === 'preferences-section') {
-                // Populate preferences form if preferences exist
-                if (userPreferences.foodTypes) {
-                    Array.from(foodTypesSelect.options).forEach(option => {
-                        option.selected = userPreferences.foodTypes.includes(option.value);
-                    });
-                }
-                favoriteDishInput.value = userPreferences.favoriteDish || '';
-                fetchRecommendations(); // Fetch recommendations when preferences section is viewed
-            }
-        });
-    });
+    function saveFavoriteRecipes(favorites) {
+        localStorage.setItem(FAVORITE_RECIPES_KEY, JSON.stringify(favorites));
+    }
 
-    // Mode selection buttons (Cook with What I Have, Find a Specific Recipe)
-    modeButtons.forEach(button => {
-        button.addEventListener('click', (event) => {
-            const sectionId = event.target.dataset.section;
-            showSection(sectionId);
-        });
-    });
+    function isFavorite(recipeId) {
+        const favorites = getFavoriteRecipes();
+        return favorites.some(recipe => recipe.id === recipeId);
+    }
 
-    // Ingredients Search
-    searchIngredientsBtn.addEventListener('click', async () => {
-        const ingredients = ingredientsInput.value.trim();
-        if (ingredients) {
-            showMessage(ingredientsMessageArea, 'Searching for recipes...', 'info');
-            ingredientsSearchResults.innerHTML = ''; // Clear previous results
+    function toggleFavoriteRecipe(id, title, image) {
+        let favorites = getFavoriteRecipes();
+        const existingIndex = favorites.findIndex(recipe => recipe.id === id);
 
-            try {
-                const response = await fetch(`https://api.edamam.com/api/recipes/v2?type=public&q=${encodeURIComponent(ingredients)}&app_id=${API_ID}&app_key=${API_KEY}`);
-                const data = await response.json();
-
-                if (data.hits && data.hits.length > 0) {
-                    renderRecipes(data.hits.map(hit => hit.recipe), ingredientsSearchResults);
-                    clearMessage(ingredientsMessageArea);
-                } else {
-                    showMessage(ingredientsMessageArea, 'No recipes found with these ingredients. Try different ones!', 'info');
-                }
-            } catch (error) {
-                console.error('Error fetching ingredients recipes:', error);
-                showMessage(ingredientsMessageArea, 'Failed to fetch recipes. Please try again later.', 'error');
-            }
+        if (existingIndex > -1) {
+            favorites.splice(existingIndex, 1);
         } else {
-            showMessage(ingredientsMessageArea, 'Please enter some ingredients to search!', 'error');
+            favorites.push({ id, title, image });
         }
-    });
+        saveFavoriteRecipes(favorites);
+    }
 
-    // Recipe Name Search
-    searchRecipeBtn.addEventListener('click', async () => {
-        const recipeName = recipeNameInput.value.trim();
-        if (recipeName) {
-            showMessage(recipeMessageArea, 'Searching for recipes...', 'info');
-            recipeSearchResults.innerHTML = ''; // Clear previous results
+    /**
+     * Displays the user's favorite recipes in the favorite-recipes-display div.
+     */
+    function displayFavoriteRecipes() {
+        const favorites = getFavoriteRecipes();
+        const favoritesDisplay = document.getElementById('favorite-recipes-display');
+        favoritesDisplay.innerHTML = '';
 
-            try {
-                const response = await fetch(`https://api.edamam.com/api/recipes/v2?type=public&q=${encodeURIComponent(recipeName)}&app_id=${API_ID}&app_key=${API_KEY}`);
-                const data = await response.json();
-
-                if (data.hits && data.hits.length > 0) {
-                    renderRecipes(data.hits.map(hit => hit.recipe), recipeSearchResults);
-                    clearMessage(recipeMessageArea);
-                } else {
-                    showMessage(recipeMessageArea, 'No recipes found with that name. Try a different search term!', 'info');
-                }
-            } catch (error) {
-                console.error('Error fetching recipe by name:', error);
-                showMessage(recipeMessageArea, 'Failed to fetch recipes. Please try again later.', 'error');
-            }
-        } else {
-            showMessage(recipeMessageArea, 'Please enter a recipe name to search!', 'error');
+        if (favorites.length === 0) {
+            favoritesDisplay.innerHTML = '<p class="message info"><i class="fas fa-info-circle"></i> No favorites yet! Click the heart icon on a recipe card to save it.</p>';
+            return;
         }
-    });
 
-    // Preferences Form Submission
-    preferencesForm.addEventListener('submit', (event) => {
+        renderRecipeCards(favorites, 'favorite-recipes-display');
+    }
+
+    // --- Feedback Section Logic ---
+    feedbackForm.addEventListener('submit', async (event) => { // <--- Changed to async
         event.preventDefault();
-        userPreferences.foodTypes = Array.from(foodTypesSelect.selectedOptions).map(option => option.value);
-        userPreferences.favoriteDish = favoriteDishInput.value.trim();
-        localStorage.setItem('flavorFinderPreferences', JSON.stringify(userPreferences));
-        showMessage(feedbackMessageArea, 'Your preferences have been saved!', 'success');
-        fetchRecommendations(); // Refresh recommendations based on new preferences
-    });
+        const name = document.getElementById('feedback-name').value;
+        const email = document.getElementById('feedback-email').value;
+        const message = document.getElementById('feedback-message').value;
 
-    // Feedback Form Submission
-    feedbackForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const name = document.getElementById('feedback-name').value.trim();
-        const email = document.getElementById('feedback-email').value.trim();
-        const message = document.getElementById('feedback-message').value.trim();
+        // Basic validation
+        if (!message) {
+            alert('Please enter your feedback message.');
+            return;
+        }
 
-        if (message) {
-            try {
-                await db.collection('feedback').add({
-                    name: name || 'Anonymous',
-                    email: email || 'N/A',
-                    message: message,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                showMessage(feedbackMessageArea, 'Thank you for your feedback! It has been submitted.', 'success');
-                feedbackForm.reset();
-            } catch (e) {
-                console.error("Error adding document: ", e);
-                showMessage(feedbackMessageArea, 'Failed to send feedback. Please try again.', 'error');
-            }
-        } else {
-            showMessage(feedbackMessageArea, 'Please enter your feedback message.', 'error');
+        // Optional: Display a loading message for feedback form
+        // displayMessage('Sending feedback...', 'loading', feedbackMessageArea);
+
+        try {
+            // Add a new document (feedback message) to the "feedback" collection
+            const docRef = await addDoc(collection(db, "feedback"), { // <--- MODIFIED LINE
+                name: name,
+                email: email,
+                message: message,
+                timestamp: serverTimestamp() // <--- MODIFIED LINE: Use Firebase server timestamp
+            });
+            console.log("Feedback submitted successfully with ID: ", docRef.id);
+            alert('Thank you for your feedback! It has been submitted.');
+            feedbackForm.reset(); // Clear the form
+
+            // Optional: Clear success message
+            // clearMessage(feedbackMessageArea);
+
+        } catch (error) {
+            console.error("Error adding feedback: ", error);
+            alert('There was an error submitting your feedback. Please try again.');
+
+            // Optional: Display error message
+            // displayMessage(`Error: ${error.message}`, 'error', feedbackMessageArea);
         }
     });
 
-    // Contact Form Submission
-    contactForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const name = document.getElementById('contact-name').value.trim();
-        const email = document.getElementById('contact-email').value.trim();
-        const message = document.getElementById('contact-message').value.trim();
+    // --- Initial Page Load Handling ---
+    function handleInitialLoad() {
+        const hasVisited = localStorage.getItem(HAS_VISITED_KEY);
+        const params = new URLSearchParams(window.location.search);
+        const viewParam = params.get('view');
+        const recipeIdParam = params.get('recipe');
 
-        if (name && email && message) {
-            try {
-                await db.collection('contactMessages').add({
-                    name: name,
-                    email: email,
-                    message: message,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                showMessage(contactMessageArea, 'Your message has been sent successfully! We will get back to you soon.', 'success');
-                contactForm.reset();
-            } catch (e) {
-                console.error("Error sending contact message: ", e);
-                showMessage(contactMessageArea, 'Failed to send message. Please try again.', 'error');
+        if (recipeIdParam) {
+            openRecipeModal(parseInt(recipeIdParam));
+            const previousView = history.state?.previousView || 'mode-selection';
+            showSection(previousView, false);
+        } else if (viewParam) {
+            if (viewParam === 'welcome-modal' && !hasVisited) {
+                welcomePreferencesModal.classList.add('active');
+                history.replaceState({ view: 'welcome-modal' }, '', `?view=welcome-modal`);
+            } else {
+                showSection(viewParam, false);
             }
+        } else if (!hasVisited) {
+            welcomePreferencesModal.classList.add('active');
+            localStorage.setItem(HAS_VISITED_KEY, 'true');
+            history.replaceState({ view: 'welcome-modal' }, '', `?view=welcome-modal`);
         } else {
-            showMessage(contactMessageArea, 'Please fill in all required fields to send your message.', 'error');
+            showSection('mode-selection', false);
         }
-    });
+    }
 
-
-    // Recipe Details Modal Close Button
-    closeModalBtn.addEventListener('click', () => {
-        recipeDetailsModal.style.display = 'none';
-    });
-
-    // Welcome Preferences Modal Close Button
+    // Welcome Preferences Modal Event Listeners
     closeWelcomeModalBtn.addEventListener('click', () => {
-        welcomePreferencesModal.style.display = 'none';
-        localStorage.setItem('flavorFinderFirstVisit', 'false'); // Mark as not first visit after closing
-    });
-
-    // Welcome Preferences Form Submission
-    welcomePreferencesForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        userPreferences.foodTypes = Array.from(welcomeFoodTypesSelect.selectedOptions).map(option => option.value);
-        userPreferences.favoriteDish = welcomeFavoriteDishInput.value.trim();
-        localStorage.setItem('flavorFinderPreferences', JSON.stringify(userPreferences));
-        localStorage.setItem('flavorFinderFirstVisit', 'false'); // Mark as not first visit
-        welcomePreferencesModal.style.display = 'none'; // Close modal
-        showMessage(feedbackMessageArea, 'Welcome! Your preferences are saved. Start exploring recipes!', 'success');
-        // Optionally, redirect to home or recommendations
+        welcomePreferencesModal.classList.remove('active');
         showSection('mode-selection');
     });
 
-    // Adjust servings in recipe details modal
-    numPersonsInput.addEventListener('input', (event) => {
-        const newServings = parseInt(event.target.value);
-        if (!isNaN(newServings) && newServings > 0) {
-            currentServings = newServings;
-            updateIngredientsDisplay(originalRecipeIngredients, currentServings);
-        }
+    welcomePreferencesForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveWelcomePreferences();
+        welcomePreferencesModal.classList.remove('active');
+        showSection('mode-selection');
+        alert('Your preferences have been saved! Enjoy discovering new flavors.');
     });
 
-    // Close modal if clicked outside
-    window.addEventListener('click', (event) => {
-        if (event.target === recipeDetailsModal) {
-            recipeDetailsModal.style.display = 'none';
-        }
-        if (event.target === welcomePreferencesModal) {
-            // Only close welcome modal if it's not the very first visit (to ensure user fills it)
-            if (!firstVisit) {
-                welcomePreferencesModal.style.display = 'none';
+    // Main Preferences Form Event Listener
+    preferencesForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const selectedCuisines = Array.from(foodTypesSelect.selectedOptions).map(option => option.value);
+        const favoriteDish = favoriteDishInput.value.trim();
+        saveUserPreferences({ foodTypes: selectedCuisines, favoriteDish: favoriteDish });
+        alert('Your preferences have been updated!');
+        displayRecommendedRecipes();
+    });
+
+    // --- History API Listener for Back/Forward Buttons ---
+    window.addEventListener('popstate', (event) => {
+        const state = event.state;
+        if (state) {
+            if (state.view === 'recipe-details') {
+                if (state.recipeId) {
+                    fetchRecipeDetails(state.recipeId);
+                }
+            } else if (state.view === 'welcome-modal') {
+                 welcomePreferencesModal.classList.add('active');
+                 recipeDetailsModal.classList.remove('active');
+                 appSections.forEach(section => section.classList.remove('active-section'));
             }
+            else {
+                recipeDetailsModal.classList.remove('active');
+                welcomePreferencesModal.classList.remove('active');
+                showSection(state.view, false);
+            }
+        } else {
+            showSection('mode-selection', false);
+            recipeDetailsModal.classList.remove('active');
+            welcomePreferencesModal.classList.remove('active');
         }
     });
 
-    // --- Initial Load Logic ---
-    if (firstVisit && Object.keys(userPreferences).length === 0) {
-        welcomePreferencesModal.style.display = 'block';
-    } else {
-        // If not first visit or preferences already exist, hide modal and show home
-        welcomePreferencesModal.style.display = 'none';
-        showSection('mode-selection'); // Start on the home section
-    }
-
-    // Initial render of favorites (if any exist)
-    renderFavorites();
+    // Call this function when the DOM is fully loaded
+    handleInitialLoad();
 });
