@@ -3,104 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlavorFinder - Discover Your Next Favorite Recipe</title>
+    <title>FlavorFinder</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-</head>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    </head>
 <body>
     <header>
-        <h1>FLAVORFINDER</h1>
-        <p>Discover delicious recipes your way!</p>
-        <nav id="main-nav">
-            <ul>
-                <li><button data-section="mode-selection">Home</button></li>
-                <li><button data-section="preferences-section">My Preferences</button></li>
-                <li><button data-section="favorites-section">Favorites</button></li>
-                <li><button data-section="feedback-section">Feedback</button></li>
-                <li><button data-section="contact-section">Contact Us</button></li>
-            </ul>
-        </nav>
+        <div class="container">
+            <h1>FlavorFinder</h1>
+            <nav id="main-nav">
+                <ul>
+                    <li><button data-section="mode-selection" class="active">Home</button></li>
+                    <li><button data-section="ingredients-search-section">Cook with What I Have</button></li>
+                    <li><button data-section="recipe-search-section">Find a Specific Recipe</button></li>
+                    <li><button data-section="preferences-section">Preferences & Recommendations</button></li>
+                    <li><button data-section="favorites-section">Favorites</button></li>
+                    <li><button data-section="feedback-section">Feedback</button></li>
+                    <li><button data-section="contact-section">Contact Us</button></li>
+                </ul>
+            </nav>
+        </div>
     </header>
 
-    <main id="app-container">
+    <main class="container">
+        <div id="welcome-preferences-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn" id="close-welcome-modal-btn">&times;</span>
+                <h2>Welcome to FlavorFinder!</h2>
+                <p>Let's personalize your experience. Tell us a bit about your food preferences:</p>
+                <form id="welcome-preferences-form">
+                    <div class="form-group">
+                        <label for="welcome-food-types">What types of food do you like?</label>
+                        <select id="welcome-food-types" multiple>
+                            <option value="Italian">Italian</option>
+                            <option value="Mexican">Mexican</option>
+                            <option value="Asian">Asian (General)</option>
+                            <option value="Indian">Indian</option>
+                            <option value="Mediterranean">Mediterranean</option>
+                            <option value="American">American</option>
+                            <option value="French">French</option>
+                            <option value="Thai">Thai</option>
+                            <option value="Chinese">Chinese</option>
+                            <option value="Japanese">Japanese</option>
+                            <option value="Vegan">Vegan</option>
+                            <option value="Vegetarian">Vegetarian</option>
+                            <option value="Gluten Free">Gluten Free</option>
+                            <option value="Dairy Free">Dairy Free</option>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="welcome-favorite-dish">Any favorite dish you love?</label>
+                        <input type="text" id="welcome-favorite-dish" placeholder="e.g., Lasagna, Tacos, Sushi">
+                    </div>
+                    <button type="submit" class="btn primary-btn">Save Preferences & Start Cooking!</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="recipe-details-modal" class="modal">
+            <div class="modal-content recipe-modal-content">
+                <span class="close-btn" id="close-modal-btn">&times;</span>
+                <h2 id="detail-title"></h2>
+                <img id="detail-image" src="" alt="Recipe Image">
+                <div class="modal-details-grid">
+                    <div class="ingredients-section">
+                        <h3>Ingredients: <small id="original-servings-info"></small></h3>
+                        <div class="servings-adjust">
+                            <label for="num-persons">Servings:</label>
+                            <input type="number" id="num-persons" value="1" min="1">
+                        </div>
+                        <ul id="detail-ingredients">
+                            </ul>
+                    </div>
+                    <div class="instructions-section">
+                        <h3>Instructions:</h3>
+                        <div id="detail-instructions">
+                            </div>
+                    </div>
+                </div>
+                <a id="source-url" href="#" target="_blank" class="btn secondary-btn" style="display: none;">View Original Recipe Source</a>
+            </div>
+        </div>
+
         <section id="mode-selection" class="app-section active-section">
-            <h2>How would you like to find recipes?</h2>
-            <p>Choose an option below to get started.</p>
+            <h2>What are you in the mood for?</h2>
             <div class="mode-buttons">
-                <button data-section="ingredients-search-section">Cook with What I Have</button>
-                <button data-section="recipe-search-section">Find a Specific Recipe</button>
+                <button data-section="ingredients-search-section" class="btn mode-btn">
+                    <i class="fas fa-utensils"></i> Cook with What I Have
+                </button>
+                <button data-section="recipe-search-section" class="btn mode-btn">
+                    <i class="fas fa-search"></i> Find a Specific Recipe
+                </button>
             </div>
         </section>
 
         <section id="ingredients-search-section" class="app-section">
-            <h2>Cook with What You Have</h2>
-            <p>Enter ingredients you have, separated by commas (e.g., chicken, rice, tomatoes).</p>
-            <div class="search-form">
-                <input type="text" id="ingredients-input" placeholder="Enter your ingredients...">
-                <button id="search-ingredients-btn">Find Recipes</button>
+            <h2>Cook with What I Have</h2>
+            <div class="search-input-group">
+                <input type="text" id="ingredients-input" placeholder="e.g., chicken, rice, soy sauce">
+                <button id="search-ingredients-btn" class="btn primary-btn"><i class="fas fa-search"></i> Search Recipes</button>
             </div>
             <div id="ingredients-message-area" class="message-area"></div>
-            <div id="ingredients-search-results" class="recipe-grid"></div>
+            <div id="ingredients-search-results" class="recipe-cards-container">
+                </div>
         </section>
 
         <section id="recipe-search-section" class="app-section">
             <h2>Find a Specific Recipe</h2>
-            <p>Enter the name of the recipe you're looking for (e.g., Lasagna, Chicken Curry).</p>
-            <div class="search-form">
-                <input type="text" id="recipe-name-input" placeholder="Enter recipe name...">
-                <button id="search-recipe-btn">Search Recipe</button>
+            <div class="search-input-group">
+                <input type="text" id="recipe-name-input" placeholder="e.g., Pasta, Curry, Cake">
+                <button id="search-recipe-btn" class="btn primary-btn"><i class="fas fa-search"></i> Search Recipes</button>
             </div>
             <div id="recipe-message-area" class="message-area"></div>
-            <div id="recipe-search-results" class="recipe-grid"></div>
+            <div id="recipe-search-results" class="recipe-cards-container">
+                </div>
         </section>
 
         <section id="preferences-section" class="app-section">
-            <h2>What flavors excite you?</h2>
-            <p>Tell us your preferences to get personalized recommendations!</p>
+            <h2>Your Preferences & Recommendations</h2>
             <form id="preferences-form">
                 <div class="form-group">
-                    <label for="food-types">What types of cuisine do you enjoy?</label>
+                    <label for="food-types">What types of food do you like?</label>
                     <select id="food-types" multiple>
                         <option value="Italian">Italian</option>
                         <option value="Mexican">Mexican</option>
+                        <option value="Asian">Asian (General)</option>
                         <option value="Indian">Indian</option>
-                        <option value="Chinese">Chinese</option>
-                        <option value="Japanese">Japanese</option>
                         <option value="Mediterranean">Mediterranean</option>
                         <option value="American">American</option>
-                        <option value="Thai">Thai</option>
                         <option value="French">French</option>
+                        <option value="Thai">Thai</option>
+                        <option value="Chinese">Chinese</option>
+                        <option value="Japanese">Japanese</option>
                         <option value="Vegan">Vegan</option>
                         <option value="Vegetarian">Vegetarian</option>
                         <option value="Gluten Free">Gluten Free</option>
                         <option value="Dairy Free">Dairy Free</option>
-                    </select>
+                        </select>
                 </div>
                 <div class="form-group">
-                    <label for="favorite-dish">What's your all-time favorite dish?</label>
-                    <input type="text" id="favorite-dish" placeholder="e.g., Lasagna, Tacos, Butter Chicken">
+                    <label for="favorite-dish">Any favorite dish you love?</label>
+                    <input type="text" id="favorite-dish" placeholder="e.g., Lasagna, Tacos, Sushi">
                 </div>
-                <button type="submit" id="save-preferences-btn">Save Preferences</button>
+                <button type="submit" class="btn primary-btn">Update Preferences</button>
             </form>
 
-            <h3>Recommended for You:</h3>
-            <div id="recommendations-display" class="recipe-grid">
-                <p>Based on your preferences, we'll suggest some tasty options!</p>
-            </div>
+            <h3>Recommended For You:</h3>
+            <div id="recommendations-display" class="recipe-cards-container">
+                </div>
         </section>
 
         <section id="favorites-section" class="app-section">
-            <h2>Your Saved Favorite Recipes</h2>
-            <p>Recipes you've loved and saved for later.</p>
-            <div id="favorite-recipes-display" class="recipe-grid">
-                <p class="message info"><i class="fas fa-info-circle"></i> No favorites yet! Click the heart icon on a recipe card to save it.</p>
-            </div>
+            <h2>Your Favorite Recipes</h2>
+            <div id="favorite-recipes-display" class="recipe-cards-container">
+                </div>
         </section>
 
         <section id="feedback-section" class="app-section">
-            <h2>We'd love your Feedback!</h2>
-            <p>Help us improve FlavorFinder by sharing your thoughts.</p>
+            <h2>Give Us Your Feedback</h2>
             <form id="feedback-form">
                 <div class="form-group">
                     <label for="feedback-name">Your Name (Optional):</label>
@@ -112,110 +176,37 @@
                 </div>
                 <div class="form-group">
                     <label for="feedback-message">Your Feedback:</label>
-                    <textarea id="feedback-message" name="message" rows="4" required></textarea>
+                    <textarea id="feedback-message" name="message" rows="5" required></textarea>
                 </div>
-                <button type="submit">Send Feedback</button>
+                <button type="submit" class="btn primary-btn">Submit Feedback</button>
             </form>
-
             <div id="feedback-message-area" class="message-area"></div>
-
-            <div class="social-media">
-                <h3>Connect with us!</h3>
-                <a href="#" target="_blank" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                <a href="#" target="_blank" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                <a href="#" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                <a href="#" target="_blank" aria-label="Pinterest"><i class="fab fa-pinterest"></i></a>
-            </div>
         </section>
+
         <section id="contact-section" class="app-section">
-    <h2>Contact Us</h2>
-    <p>We’re here to help! Reach out to us using the form below or connect via email.</p>
-
-    <form id="contact-form">
-        <div class="form-group">
-            <label for="contact-name">Name:</label>
-            <input type="text" id="contact-name" placeholder="Your Name">
-        </div>
-        <div class="form-group">
-            <label for="contact-email">Email:</label>
-            <input type="email" id="contact-email" placeholder="Your Email">
-        </div>
-        <div class="form-group">
-            <label for="contact-message">Message:</label>
-            <textarea id="contact-message" rows="4" placeholder="Your message..."></textarea>
-        </div>
-        <button type="submit">Send Message</button>
-    </form>
-
-    <div class="contact-details">
-        <p><strong>Email:</strong> jagadeeshbabu659@gmail.com</p>
-        <p><strong>Phone:</strong> +91 98765 43210</p>
-        <p><strong>Address:</strong> Andhra Pradesh, India</p>
-    </div>
-</section>
-
-
-        <div id="recipe-details-modal" class="modal">
-            <div class="modal-content">
-                <button class="close-button" id="close-modal-btn">&times;</button>
-                <div id="recipe-details-content">
-                    <h2 id="detail-title"></h2>
-                    <img id="detail-image" src="" alt="Recipe Image">
-                    <div class="servings-control">
-                        <label for="num-persons">Servings:</label>
-                        <input type="number" id="num-persons" value="1" min="1">
-                        <span id="original-servings-info"></span>
-                    </div>
-                    <h3>Ingredients:</h3>
-                    <ul id="detail-ingredients"></ul>
-                    <h3>Instructions:</h3>
-                    <div id="detail-instructions"></div>
-                    <a id="source-url" href="#" target="_blank" class="button-link">View Full Recipe Source</a>
+            <h2>Contact Us</h2>
+            <form id="contact-form">
+                <div class="form-group">
+                    <label for="contact-name">Your Name:</label>
+                    <input type="text" id="contact-name" name="name" required>
                 </div>
-            </div>
-        </div>
-
-        <div id="welcome-preferences-modal" class="modal">
-            <div class="modal-content">
-                <button class="close-button" id="close-welcome-modal-btn">&times;</button>
-                <h2>Welcome to FlavorFinder!</h2>
-                <p>To help us personalize your experience, tell us a little about your food preferences.</p>
-                <form id="welcome-preferences-form">
-                    <div class="form-group">
-                        <label for="welcome-food-types">What types of cuisine do you enjoy?</label>
-                        <select id="welcome-food-types" multiple>
-                            <option value="Italian">Italian</option>
-                            <option value="Mexican">Mexican</option>
-                            <option value="Indian">Indian</option>
-                            <option value="Chinese">Chinese</option>
-                            <option value="Japanese">Japanese</option>
-                            <option value="Mediterranean">Mediterranean</option>
-                            <option value="American">American</option>
-                            <option value="Thai">Thai</option>
-                            <option value="French">French</option>
-                            <option value="Vegan">Vegan</option>
-                            <option value="Vegetarian">Vegetarian</option>
-                            <option value="Gluten Free">Gluten Free</option>
-                            <option value="Dairy Free">Dairy Free</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="welcome-favorite-dish">What's your all-time favorite dish?</label>
-                        <input type="text" id="welcome-favorite-dish" placeholder="e.g., Lasagna, Tacos, Butter Chicken">
-                    </div>
-                    <button type="submit" id="save-welcome-preferences-btn">Start Discovering Recipes!</button>
-                </form>
-            </div>
-        </div>
+                <div class="form-group">
+                    <label for="contact-email">Your Email:</label>
+                    <input type="email" id="contact-email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="contact-message">Message:</label>
+                    <textarea id="contact-message" name="message" rows="5" required></textarea>
+                </div>
+                <button type="submit" class="btn primary-btn">Send Message</button>
+            </form>
+            <div id="contact-message-area" class="message-area"></div> </section>
     </main>
 
     <footer>
-        <p>&copy; 2025 FlavorFinder. All rights reserved.</p>
+        <div class="container">
+            <p>&copy; 2025 FlavorFinder. All rights reserved.</p>
+        </div>
     </footer>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
-    <script src="script.js"></script>
-
-</body>
+    <script src="script.js"></script> </body>
 </html>
