@@ -1,8 +1,3 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// Import Firestore-specific functions
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore"; // <--- ADD THIS LINE
-
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -17,9 +12,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-// Get a reference to the Firestore service <--- ADD THIS LINE
-const db = getFirestore(app); // <--- ADD THIS LINE
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 
 document.addEventListener('DOMContentLoaded', () => {
