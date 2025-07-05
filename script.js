@@ -1,22 +1,24 @@
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Remove these lines entirely:
+// import { initializeApp } from "firebase/app";
+// import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCdyfjSa7nOC23fYzAMkc8snqrnhLnDuTI",
-  authDomain: "flavorfinderfeedback.firebaseapp.com",
-  projectId: "flavorfinderfeedback",
-  storageBucket: "flavorfinderfeedback.firebasestorage.app",
-  messagingSenderId: "1020798096498",
-  appId: "1:1020798096498:web:96def282d9607dcf821eeb"
+    apiKey: "AIzaSyCdyfjSa7nOC23fYzAMkc8snqrnhLnDuTI",
+    authDomain: "flavorfinderfeedback.firebaseapp.com",
+    projectId: "flavorfinderfeedback",
+    storageBucket: "flavorfinderfeedback.firebasestorage.app",
+    messagingSenderId: "1020798096498",
+    appId: "1:1020798096498:web:96def282d9607dcf821eeb"
 };
 
-// Initialize Firebase
+// Initialize Firebase using the global `firebase` object provided by the compat SDKs
 const app = firebase.initializeApp(firebaseConfig);
+// Get a reference to the Firestore service using the global `firebase` object
 const db = firebase.firestore();
 
-
 document.addEventListener('DOMContentLoaded', () => {
+
     // --- API Key ---
     const API_KEY = '8a8295b5f3ef4ae1bd320653164918e6'; // <--- REMEMBER TO REPLACE WITH YOUR ACTUAL API KEY
 
@@ -69,7 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Feedback Section
     const feedbackForm = document.getElementById('feedback-form');
     // You might also want a message area for feedback form
-    // const feedbackMessageArea = document.getElementById('feedback-message-area'); // Add this to your HTML if you want specific feedback messages
+    const feedbackMessageArea = document.getElementById('feedback-message-area'); // Added: Assuming you will add this to your HTML
+
 
     // --- Global Variables for Recipe Details and Scaling ---
     let currentRecipeDetails = null;
@@ -111,8 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sectionId === 'ingredients-search-section' || sectionId === 'recipe-search-section') {
                 modeSelectionSection.classList.remove('active-section');
             } else if (sectionId === 'mode-selection') {
-                   // Ensure mode-selection is visible when home is clicked
-                   modeSelectionSection.classList.add('active-section');
+                // Ensure mode-selection is visible when home is clicked
+                modeSelectionSection.classList.add('active-section');
             }
 
             // Re-render content specific to sections when they are shown
@@ -205,8 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function clearAllMessages() {
         clearMessage(ingredientsMessageArea);
         clearMessage(recipeMessageArea);
-        // If you add feedbackMessageArea, clear it here too
-        // clearMessage(feedbackMessageArea);
+        clearMessage(feedbackMessageArea); // Added: Clear feedback message area
     }
 
     // --- Search Logic (Cook with What I Have) ---
@@ -354,9 +356,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             if (containerId === 'favorite-recipes-display') {
-                 containerDiv.innerHTML = '<p class="message info"><i class="fas fa-info-circle"></i> No favorites yet! Click the heart icon on a recipe card to save it.</p>';
+                containerDiv.innerHTML = '<p class="message info"><i class="fas fa-info-circle"></i> No favorites yet! Click the heart icon on a recipe card to save it.</p>';
             } else {
-                 containerDiv.innerHTML = '<p class="message info">No recipes to display.</p>';
+                containerDiv.innerHTML = '<p class="message info">No recipes to display.</p>';
             }
         }
     }
@@ -567,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Feedback Section Logic ---
-    feedbackForm.addEventListener('submit', async (event) => { // <--- Changed to async
+    feedbackForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const name = document.getElementById('feedback-name').value;
         const email = document.getElementById('feedback-email').value;
@@ -575,34 +577,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Basic validation
         if (!message) {
-            alert('Please enter your feedback message.');
+            displayMessage('Please enter your feedback message.', 'error', feedbackMessageArea); // Use displayMessage
             return;
         }
 
-        // Optional: Display a loading message for feedback form
-        // displayMessage('Sending feedback...', 'loading', feedbackMessageArea);
+        displayMessage('Sending feedback...', 'loading', feedbackMessageArea); // Display loading message
 
         try {
             // Add a new document (feedback message) to the "feedback" collection
-            const docRef = await addDoc(collection(db, "feedback"), { // <--- MODIFIED LINE
+            // Use db.collection("collectionName").add() for compatibility SDK
+            await db.collection("feedback").add({
                 name: name,
                 email: email,
                 message: message,
-                timestamp: serverTimestamp() // <--- MODIFIED LINE: Use Firebase server timestamp
+                timestamp: firebase.firestore.FieldValue.serverTimestamp() // Use firebase.firestore.FieldValue.serverTimestamp()
             });
-            console.log("Feedback submitted successfully with ID: ", docRef.id);
-            alert('Thank you for your feedback! It has been submitted.');
+            console.log("Feedback submitted successfully.");
+            displayMessage('Thank you for your feedback! It has been submitted.', 'success', feedbackMessageArea); // Use displayMessage
             feedbackForm.reset(); // Clear the form
-
-            // Optional: Clear success message
-            // clearMessage(feedbackMessageArea);
 
         } catch (error) {
             console.error("Error adding feedback: ", error);
-            alert('There was an error submitting your feedback. Please try again.');
-
-            // Optional: Display error message
-            // displayMessage(`Error: ${error.message}`, 'error', feedbackMessageArea);
+            displayMessage(`There was an error submitting your feedback: ${error.message}`, 'error', feedbackMessageArea); // Use displayMessage
         }
     });
 
@@ -666,11 +662,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchRecipeDetails(state.recipeId);
                 }
             } else if (state.view === 'welcome-modal') {
-                 welcomePreferencesModal.classList.add('active');
-                 recipeDetailsModal.classList.remove('active');
-                 appSections.forEach(section => section.classList.remove('active-section'));
-            }
-            else {
+                welcomePreferencesModal.classList.add('active');
+                recipeDetailsModal.classList.remove('active');
+                appSections.forEach(section => section.classList.remove('active-section'));
+            } else {
                 recipeDetailsModal.classList.remove('active');
                 welcomePreferencesModal.classList.remove('active');
                 showSection(state.view, false);
