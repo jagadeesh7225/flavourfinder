@@ -1,0 +1,105 @@
+/* src/components/AuthForms.css */
+.auth-section {
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: rgba(255, 255, 255, 0.8); /* Reduced alpha value for more transparency */
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    backdrop-filter: blur(5px); /* Optional: Frosted glass effect */
+    -webkit-backdrop-filter: blur(5px); /* Safari support */
+    color: #333; /* Darker text for readability on light background */
+}
+
+.auth-section h2 {
+    color: #5c6bc0; /* Primary color */
+    margin-bottom: 25px;
+    font-size: 2em;
+}
+
+.auth-form .form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.auth-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #444;
+}
+
+.auth-form input[type="email"],
+.auth-form input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1em;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.auth-form button[type="submit"] {
+    background-color: #5c6bc0; /* Primary button color */
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 100%;
+    margin-top: 15px;
+}
+
+.auth-form button[type="submit"]:hover:not(:disabled) {
+    background-color: #4b5ca3; /* Darker on hover */
+    transform: translateY(-2px);
+}
+
+.auth-form button[type="submit"]:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.auth-message {
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.auth-message.error {
+    background-color: #ffe0e0;
+    color: #d32f2f;
+    border: 1px solid #d32f2f;
+}
+
+.auth-message.success {
+    background-color: #e0ffe0;
+    color: #388e3c;
+    border: 1px solid #388e3c;
+}
+
+.auth-link {
+    margin-top: 25px;
+    font-size: 0.95em;
+    color: #555;
+}
+
+.auth-link button {
+    background: none;
+    border: none;
+    color: #5c6bc0;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 1em;
+    padding: 0;
+    margin-left: 5px;
+    transition: color 0.2s ease;
+}
+
+.auth-link button:hover {
+    color: #4b5ca3;
+}
