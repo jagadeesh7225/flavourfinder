@@ -16,7 +16,7 @@ import Signup from './components/Signup';
 
 import { useAuth } from './contexts/AuthContext.jsx';
 
-const SPOONACULAR_API_KEY = '8a8295b5f3ef4ae1bd320653164918e6';
+const SPOONACULAR_API_KEY = import.meta.env.VITE_SPOONACULAR_API_KEY;
 
 function App() {
     const { currentUser, logout, loading: authLoading } = useAuth();
