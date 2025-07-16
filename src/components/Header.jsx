@@ -15,11 +15,9 @@ function Header({ navigateTo, currentUser, onLogout }) {
                     <li><button onClick={() => navigateTo('contact-section')}>Contact Us</button></li>
                     {currentUser && ( // Only show if user is logged in
                         <>
-                            {/* Logout button */}
                             <li><button onClick={onLogout}>Logout</button></li>
                         </>
                     )}
-                    {/* Login/Signup buttons are removed from here as they are now the primary entry point */}
                 </ul>
             </nav>
         </header>

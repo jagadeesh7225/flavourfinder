@@ -21,7 +21,7 @@ body {
 }
 
 header {
-    background: rgba(92, 107, 192, 0.8);
+    background: #5c6bc0cc;
     color: #fff;
     padding: 20px 0;
     text-align: center;
@@ -371,7 +371,6 @@ main#app-container {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-bottom: 20px;
 }
 
 #preferences-section .form-group input[type="checkbox"] {
@@ -382,9 +381,12 @@ main#app-container {
 }
 
 #preferences-section .checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 40px;
+  margin: 20px;
 }
 
 .form-group input,
@@ -398,6 +400,19 @@ main#app-container {
     border-radius: 5px;
     font-size: 1em;
     transition: all 0.3s ease;
+}
+
+.form-group select[multiple] {
+    height: 200px;
+    min-height: 180px;
+    padding: 10px;
+    font-size: 1em;
+    line-height: 1.4;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #F44336;
+    border-radius: 5px;
+    color: #333;
 }
 
 .form-group input::placeholder,
@@ -522,14 +537,6 @@ main#app-container {
     box-shadow: none;
 }
 
-footer {
-    background: rgba(92, 107, 192, 0.8);
-    color: #fff;
-    text-align: center;
-    padding: 15px 0;
-    margin-top: auto;
-}
-
 .contact-details {
     margin-top: 30px;
     background-color: rgba(255,255,255,0.8);
@@ -551,6 +558,7 @@ footer {
 
 #contact-section .form-group input,
 #contact-section .form-group textarea {
+    width: 100%;
     background: rgba(255, 255, 255, 0.95);
     color: #000;
     font-weight: 500;
@@ -584,4 +592,116 @@ footer {
 #contact-section button[type="submit"]:active {
     transform: translateY(0);
     box-shadow: none;
+}
+
+/* Modal Overlay */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 40px 30px;
+  border-radius: 8px;
+  max-width: 700px;
+  width: 90%;
+  color: #333;
+  position: relative;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.modal-content h2 {
+  color: #F44336;
+  font-family: 'Poppins', sans-serif;
+  margin-bottom: 20px;
+}
+
+.modal-content p {
+  color: #555;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.modal-content h3 {
+  margin-top: 20px;
+  color: #E53935;
+}
+
+.modal-content ul {
+  margin-left: 20px;
+  color: #555;
+}
+
+.close-button {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 2rem;
+  color: #F44336;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.close-button:hover {
+  color: #E53935;
+}
+
+.button-link {
+  display: inline-block;
+  background: #F44336;
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 5px;
+  margin-top: 20px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.button-link:hover {
+  background: #E53935;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#app-container {
+  flex: 1;
+}
+
+.footer {
+  background-color: #5c6bc0cc;
+  color: white;
+  text-align: center;
+  padding: 12px;
+}
+body.modal-open {
+  overflow: hidden;
 }

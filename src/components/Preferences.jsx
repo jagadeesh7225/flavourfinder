@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import RecipeCard from './RecipeCard'; 
+import RecipeCard from './RecipeCard';
 import MessageArea from './MessageArea';
+import RecipeDetailsModal from './RecipeDetailsModal';
 
 const cuisineOptions = [
     "African", "Asian", "American", "British", "Cajun", "Caribbean",
@@ -25,7 +26,6 @@ function Preferences({
     userPreferences,
     onSavePreferences,
     api_key,
-    onRecipeClick,
     toggleFavorite,
     isFavorite,
     setIsLoading
@@ -36,6 +36,9 @@ function Preferences({
     const [recommendedRecipes, setRecommendedRecipes] = useState([]);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
+
+    const [showModal, setShowModal] = useState(false);
+    const [selectedRecipeId, setSelectedRecipeId] = useState(null);
 
     useEffect(() => {
         setFoodTypes(userPreferences.foodTypes || []);
@@ -65,6 +68,11 @@ function Preferences({
             favoriteDish
         });
         fetchRecommendations();
+    };
+
+    const handleRecipeClick = (recipe) => {
+        setSelectedRecipeId(recipe.id);
+        setShowModal(true);
     };
 
     const fetchRecommendations = async () => {
@@ -129,31 +137,37 @@ function Preferences({
 
     return (
         <section id="preferences-section" className="section">
-            <h2>What flavors excite you?</h2>
+            {/* Heading updated with a class */}
+            <h2 className="preferences-title">What flavors excite you?</h2>
             <form id="preferences-form" onSubmit={handleSaveClick}>
                 <div className="form-group">
-                    <label>Select preferred food types:</label>
-                    {foodTypesOptions.map(type => (
-                        <div key={type}>
-                            <input
-                                type="checkbox"
-                                id={`foodType-${type}`}
-                                value={type}
-                                checked={foodTypes.includes(type)}
-                                onChange={handleFoodTypeChange}
-                            />
-                            <label htmlFor={`foodType-${type}`}>{type}</label>
-                        </div>
-                    ))}
+                    <label className="preferences-label">Select preferred food types:</label>
+                    <div className="checkbox-group">
+                        {foodTypesOptions.map(type => (
+                            <div className="checkbox-item" key={type}>
+                                <input
+                                    type="checkbox"
+                                    id={`foodType-${type}`}
+                                    value={type}
+                                    checked={foodTypes.includes(type)}
+                                    onChange={handleFoodTypeChange}
+                                />
+                                <label htmlFor={`foodType-${type}`}>{type}</label>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="food-types">What types of cuisine do you enjoy?</label>
+                    <label htmlFor="food-types" className="preferences-label">
+                        What types of cuisine do you enjoy?
+                    </label>
                     <select
                         id="food-types"
                         multiple
                         value={cuisines}
                         onChange={handleCuisineChange}
+                        size={8}
                     >
                         {cuisineOptions.map(cuisine => (
                             <option key={cuisine} value={cuisine}>
@@ -164,7 +178,9 @@ function Preferences({
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="favorite-dish">Your favorite dish (e.g., chicken, paneer):</label>
+                    <label htmlFor="favorite-dish" className="preferences-label">
+                        Your favorite dish (e.g., chicken, paneer):
+                    </label>
                     <input
                         type="text"
                         id="favorite-dish"
@@ -187,7 +203,7 @@ function Preferences({
                         <RecipeCard
                             key={recipe.id}
                             recipe={recipe}
-                            onRecipeClick={onRecipeClick}
+                            onRecipeClick={() => handleRecipeClick(recipe)}
                             toggleFavorite={toggleFavorite}
                             isFavorite={isFavorite}
                             show={true}
@@ -195,6 +211,14 @@ function Preferences({
                     ))}
                 </div>
             )}
+
+            <RecipeDetailsModal
+                show={showModal}
+                recipeId={selectedRecipeId}
+                onClose={() => setShowModal(false)}
+                api_key={api_key}
+                setIsLoading={setIsLoading}
+            />
         </section>
     );
 }

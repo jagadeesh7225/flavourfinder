@@ -9,7 +9,6 @@ import Favorites from './components/Favorites';
 import Feedback from './components/Feedback';
 import Contact from './components/Contact';
 import RecipeDetailsModal from './components/RecipeDetailsModal';
-import WelcomePreferencesModal from './components/WelcomePreferencesModal';
 import SpiceLoader from './components/SpiceLoader';
 
 import Login from './components/Login';
@@ -23,7 +22,6 @@ function App() {
     const { currentUser, logout, loading: authLoading } = useAuth();
     const [isLoginView, setIsLoginView] = useState(true);
     const [activeSection, setActiveSection] = useState('mode-selection');
-    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
     const [showRecipeDetailsModal, setShowRecipeDetailsModal] = useState(false);
     const [selectedRecipeId, setSelectedRecipeId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +47,6 @@ function App() {
         const params = new URLSearchParams(window.location.search);
         const viewParam = params.get('view');
         const recipeIdParam = params.get('recipe');
-        const hasVisited = localStorage.getItem('flavorFinder_hasVisited');
 
         if (recipeIdParam) {
             setSelectedRecipeId(parseInt(recipeIdParam));
@@ -57,14 +54,7 @@ function App() {
             const previousView = history.state?.previousView || 'mode-selection';
             setActiveSection(previousView);
         } else if (viewParam) {
-            if (viewParam === 'welcome-modal' && !hasVisited) {
-                setShowWelcomeModal(true);
-            } else {
-                setActiveSection(viewParam);
-            }
-        } else if (!hasVisited) {
-            setShowWelcomeModal(true);
-            localStorage.setItem('flavorFinder_hasVisited', 'true');
+            setActiveSection(viewParam);
         } else {
             setActiveSection('mode-selection');
         }
@@ -87,24 +77,27 @@ function App() {
                         setShowRecipeDetailsModal(false);
                         setActiveSection(state.previousView || 'mode-selection');
                     }
-                } else if (state.view === 'welcome-modal') {
-                    setShowWelcomeModal(true);
-                    setShowRecipeDetailsModal(false);
                 } else {
                     setShowRecipeDetailsModal(false);
-                    setShowWelcomeModal(false);
                     setActiveSection(state.view);
                 }
             } else {
                 setActiveSection('mode-selection');
                 setShowRecipeDetailsModal(false);
-                setShowWelcomeModal(false);
             }
         };
 
         window.addEventListener('popstate', handlePopstate);
         return () => window.removeEventListener('popstate', handlePopstate);
     }, [authLoading, currentUser, activeSection]);
+
+    useEffect(() => {
+        if (showRecipeDetailsModal) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
+    }, [showRecipeDetailsModal]);
 
     const navigateTo = (sectionId, pushState = true) => {
         if (!currentUser) return;
@@ -140,14 +133,6 @@ function App() {
         }
     };
 
-    const handleSaveWelcomePreferences = (prefs) => {
-        setUserPreferences(prefs);
-        localStorage.setItem('flavorFinder_userPreferences', JSON.stringify(prefs));
-        localStorage.setItem('flavorFinder_hasVisited', 'true');
-        setShowWelcomeModal(false);
-        navigateTo('mode-selection');
-    };
-
     const handleSavePreferences = (prefs) => {
         setUserPreferences(prefs);
         localStorage.setItem('flavorFinder_userPreferences', JSON.stringify(prefs));
@@ -180,7 +165,6 @@ function App() {
             setFavoriteRecipes([]);
             localStorage.removeItem('flavorFinder_userPreferences');
             localStorage.removeItem('flavorFinder_favoriteRecipes');
-            localStorage.removeItem('flavorFinder_hasVisited');
             window.history.replaceState({}, '', window.location.pathname);
         } catch (error) {
             console.error('Logout error:', error);
@@ -215,7 +199,7 @@ function App() {
     }
 
     return (
-        <>
+        <div className="app-layout">
             <Header
                 navigateTo={navigateTo}
                 currentUser={currentUser}
@@ -225,7 +209,6 @@ function App() {
                 {activeSection === 'mode-selection' && (
                     <ModeSelection navigateTo={navigateTo} />
                 )}
-
                 {activeSection === 'ingredients-search-section' && (
                     <RecipeSearch
                         mode="ingredients"
@@ -236,7 +219,6 @@ function App() {
                         setIsLoading={setIsLoading}
                     />
                 )}
-
                 {activeSection === 'recipe-search-section' && (
                     <RecipeSearch
                         mode="recipe-search"
@@ -247,7 +229,6 @@ function App() {
                         setIsLoading={setIsLoading}
                     />
                 )}
-
                 {activeSection === 'preferences-section' && (
                     <Preferences
                         userPreferences={userPreferences}
@@ -259,7 +240,6 @@ function App() {
                         setIsLoading={setIsLoading}
                     />
                 )}
-
                 {activeSection === 'favorites-section' && (
                     <Favorites
                         favoriteRecipes={favoriteRecipes}
@@ -268,7 +248,6 @@ function App() {
                         isFavorite={isRecipeFavorite}
                     />
                 )}
-
                 {activeSection === 'feedback-section' && <Feedback />}
                 {activeSection === 'contact-section' && <Contact />}
             </main>
@@ -281,15 +260,10 @@ function App() {
                 setIsLoading={setIsLoading}
             />
 
-            <WelcomePreferencesModal
-                show={showWelcomeModal}
-                onSave={handleSaveWelcomePreferences}
-                onClose={() => {
-                    setShowWelcomeModal(false);
-                    navigateTo('mode-selection');
-                }}
-            />
-        </>
+            <footer className="footer">
+                All rights reserved! FlavorFinder © 2025
+            </footer>
+        </div>
     );
 }
 
